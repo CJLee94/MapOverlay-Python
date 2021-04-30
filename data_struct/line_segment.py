@@ -55,7 +55,12 @@ class Point:
         if abs((self.x - seg.low.x) * (seg.high.y - seg.low.y) - (self.y - seg.low.y) * (seg.high.x - seg.low.x))>1e-6:
             return False
         else:
-            return seg.low.y < self.y < seg.high.y and (seg.low.x < self.x < seg.high.x or seg.high.x < self.x < seg.low.x)
+            if not seg.horizontal:
+                return seg.low.y < self.y < seg.high.y and (seg.low.x < self.x < seg.high.x or seg.high.x < self.x < seg.low.x)
+            if seg.horizontal:
+                return (seg.low.x < self.x < seg.high.x) or (seg.high.x < self.x < seg.low.x)
+            elif seg.vertical:
+                return seg.low.y < self.y < seg.high.y
 
     def draw(self, axis=None, **kwargs):
         if axis is None:
@@ -144,11 +149,20 @@ class LineSegments(object):
         self.x = None
         self.plot = None
         self.sweep_status = None
+        if self.high.y == self.low.y:
+            self.horizontal = True
+        else:
+            self.horizontal = False
+
+        if self.high.x == self.low.x:
+            self.vertical = True
+        else:
+            self.vertical = False
 
     def sweep(self, y):
         self.sweep_status = y
-        if self.low.y == self.high.y and self.low.y == y:
-            self.x = 1e12
+        if self.low.y == self.high.y:
+            self.x = self.high.x
         elif (self.low.y <= y <= self.high.y) or (self.low.y >= y >= self.high.y):
             self.x = self.high.x + (y-self.high.y) * (self.high.x - self.low.x) / (self.high.y - self.low.y)
 
@@ -172,7 +186,7 @@ class LineSegments(object):
             return False
 
     def __hash__(self):
-        return hash(self.low.x + 100*self.low.y + 1e4*self.high.x + 1e6* self.high.y)
+        return hash(self.low.x + 100*self.low.y + 1e4*self.high.x + 1e6*self.high.y)
 
     def __lt__(self, other):
         return self.x < other.x
