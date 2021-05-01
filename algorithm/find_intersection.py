@@ -47,14 +47,14 @@ class SweepLine:
             p = self.q.extractMin()
             self.handle_eventpoint(p)
 
-    def add_to_sortedlist(self, seg, l):
-        if seg.horizontal:
-            l.append(seg)
-        else:
-            bisect.insort_left(l, seg)
+    def add_to_t(self, seg):
+        bisect.insort_left(self.t.s, seg)
 
     def add_to_UC(self, seg):
-        if seg.horizontal
+        if seg.horizontal:
+            self.h.append(seg)
+        else:
+            bisect.insort_left(self.UC, seg)
         # S.add(seg)
         # if S is self.L:
         #     seg.plot[0].set_color("green")
@@ -66,6 +66,7 @@ class SweepLine:
     def clean_sets(self):
         self.LC = []
         self.UC = []
+        self.h = []
 
     def check(self, l):
         if any(element.x is None for element in l):
@@ -80,9 +81,15 @@ class SweepLine:
 
         # Let U be the set of segments whose upper endpoint is p
         # self.ax.set_title("all the segments whose upper endpoint is p")
+        print("find line segments whose upper endpoint is current point")
         for seg in p.incident_edge["upper"]:
-            seg.sweep(p.y-1e-6)
-            self.add_to_sortedlist(seg, self.UC)
+            if seg.horizontal:
+                seg.sweep(p.y)
+                seg.x = p.x
+            else:
+                seg.sweep(p.y-1e-3)
+            self.add_to_UC(seg)
+            print("line segment:(({}, {}), ({}, {}))".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
             self.check(self.UC)
             # if seg.x == 1e12:
             #     self.UC.append(seg)
@@ -96,26 +103,39 @@ class SweepLine:
 
         t_s = self.t.s.copy()
         for seg in t_s:
-            if seg in p.incident_edge["lower"]:
+            print("processing segment (({}, {}), ({}, {}))".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
+            if any(elem is seg for elem in p.incident_edge["lower"]):
                 self.t.delete(seg)
                 # self.add_to_set(seg, self.L)
                 self.LC.append(seg)
                 seg.plot[0].set_color("blue")
+                print("its lower endpoint is p")
             elif p.interior_line(seg):
                 self.t.delete(seg)
-                seg.sweep(p.y-1e-6)
-                self.add_to_sortedlist(seg, self.UC)
+                if seg.horizontal:
+                    seg.sweep(p.y)
+                    seg.x = p.x
+                else:
+                    seg.sweep(p.y-1e-3)
+                self.add_to_UC(seg)
                 self.check(self.UC)
                 # bisect.insort_left(self.UC, seg)
                 self.LC.append(seg)
                 seg.plot[0].set_color("blue")
                 # self.t.insert(seg)
                 # self.add_to_set(seg, self.C)
+                print("p is contained in the segment")
             else:
                 self.t.delete(seg)
-                seg.sweep(p.y)
-                self.add_to_sortedlist(seg, self.t.s)
-                seg.plot[0].set_color("black")
+                if seg.horizontal:
+                    seg.sweep(p.y)
+                    seg.x = p.x
+                else:
+                    seg.sweep(p.y)
+                print("segment is not related to p")
+                if seg not in self.t.s:
+                    self.add_to_t(seg)
+                    seg.plot[0].set_color("black")
 
         # self.ax.set_title("all the segments whose lower endpoint is p")
         # # self.set_color(L, "red")
@@ -141,12 +161,17 @@ class SweepLine:
 
         seg_p = LineSegments([p.x, p.y - 1, p.x, p.y + 1])
         seg_p.x = p.x
-        for seg in self.UC:
+        self.UC += self.h
+        insert_idx = bisect.bisect_right(self.t.s, seg_p)
+        for seg_i, seg in enumerate(self.UC):
             # e.sweep(p.y)
-            insert_idx = bisect.bisect_right(self.t.s, seg_p)
-            self.check(self.t.s)
-            self.t.s.insert(insert_idx, seg)
-            seg.plot[0].set_color("black")
+            if seg not in self.t.s:
+                if seg_i == 0:
+                # self.check(self.t.s)
+                    self.t.s.insert(insert_idx, seg)
+                else:
+                    self.t.s.insert(insert_idx+1, seg)
+                seg.plot[0].set_color("black")
             # e.plot[0].set_color("black")
 
         print("Active Segments:")
@@ -175,6 +200,7 @@ class SweepLine:
             if s_r:
                 self.find_new_event(s_pprime, s_r, p)
 
+        plt.waitforbuttonpress()
         self.clean_sets()
         p.plot.set_color("gray")
 

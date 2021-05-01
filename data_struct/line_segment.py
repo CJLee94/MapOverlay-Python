@@ -55,12 +55,13 @@ class Point:
         if abs((self.x - seg.low.x) * (seg.high.y - seg.low.y) - (self.y - seg.low.y) * (seg.high.x - seg.low.x))>1e-6:
             return False
         else:
-            if not seg.horizontal:
-                return seg.low.y < self.y < seg.high.y and (seg.low.x < self.x < seg.high.x or seg.high.x < self.x < seg.low.x)
             if seg.horizontal:
                 return (seg.low.x < self.x < seg.high.x) or (seg.high.x < self.x < seg.low.x)
             elif seg.vertical:
                 return seg.low.y < self.y < seg.high.y
+            else:
+                return seg.low.y < self.y < seg.high.y and (
+                            seg.low.x < self.x < seg.high.x or seg.high.x < self.x < seg.low.x)
 
     def draw(self, axis=None, **kwargs):
         if axis is None:
