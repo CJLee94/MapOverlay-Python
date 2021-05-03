@@ -10,7 +10,7 @@ import numpy as np
 
 
 class SweepLine:
-    def __init__(self, segments):
+    def __init__(self, segments, draw=True):
         self.q = EPEventQueue()
         self.t = SortedSet()
         self.intersection = set()
@@ -30,6 +30,18 @@ class SweepLine:
             # seg.low.draw(self.ax, color="blue")
             self.q.insertKey(seg.high, ax=self.ax)
             self.q.insertKey(seg.low, ax=self.ax)
+        self.x_min = segments[:, [0, 2]].min()
+        self.x_max = segments[:, [0, 2]].max()
+        self.sline = None
+        self.initilize_sweepline()
+        self.pause = plt.waitforbuttonpress if draw else lambda *a: None
+
+    def initilize_sweepline(self):
+        y = self.q.getMin().y
+        self.sline = self.ax.plot([self.x_min - 0.2, self.x_max + 0.2], [y, y], "--", color="gray")
+
+    def draw_sweepline(self, y):
+        self.sline[0].set_ydata([y,y])
 
     def find_intersection(self):
         """
@@ -45,10 +57,14 @@ class SweepLine:
         # TODO: Sweep Line
         while len(self.q.heap) != 0:
             p = self.q.extractMin()
+            self.draw_sweepline(p.y)
             self.handle_eventpoint(p)
 
+    def add_to_sortedlist(self, lst, elem):
+        bisect.insort_left(lst, elem)
+
     def add_to_t(self, seg):
-        bisect.insort_left(self.t.s, seg)
+        self.add_to_sortedlist(self.t.s, seg)
 
     def add_to_UC(self, seg):
         if seg.horizontal:
@@ -77,7 +93,7 @@ class SweepLine:
         # begin the starting phase of handling the point
         p.plot.set_color("green")
         self.ax.set_title("handling point ({}, {})".format(p.x, p.y))
-        plt.waitforbuttonpress()
+        self.pause()
 
         # Let U be the set of segments whose upper endpoint is p
         # self.ax.set_title("all the segments whose upper endpoint is p")
@@ -101,17 +117,20 @@ class SweepLine:
         # plt.waitforbuttonpress()
         # self.set_color(U, "blue")
 
-        t_s = self.t.s.copy()
-        for seg in t_s:
+        # t_s = self.t.s.copy()
+        # for seg in t_s:
+        t_s = []
+        while len(self.t.s) > 0:
+            seg = self.t.s.pop()
             print("processing segment (({}, {}), ({}, {}))".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
             if any(elem is seg for elem in p.incident_edge["lower"]):
-                self.t.delete(seg)
+                # self.t.delete(seg)
                 # self.add_to_set(seg, self.L)
                 self.LC.append(seg)
                 seg.plot[0].set_color("blue")
                 print("its lower endpoint is p")
             elif p.interior_line(seg):
-                self.t.delete(seg)
+                # self.t.delete(seg)
                 if seg.horizontal:
                     seg.sweep(p.y)
                     seg.x = p.x
@@ -126,17 +145,16 @@ class SweepLine:
                 # self.add_to_set(seg, self.C)
                 print("p is contained in the segment")
             else:
-                self.t.delete(seg)
+                # self.t.delete(seg)
                 if seg.horizontal:
                     seg.sweep(p.y)
                     seg.x = p.x
                 else:
                     seg.sweep(p.y)
                 print("segment is not related to p")
-                if seg not in self.t.s:
-                    self.add_to_t(seg)
-                    seg.plot[0].set_color("black")
-
+                self.add_to_sortedlist(t_s, seg)
+                seg.plot[0].set_color("black")
+        self.t.s = t_s
         # self.ax.set_title("all the segments whose lower endpoint is p")
         # # self.set_color(L, "red")
         # plt.waitforbuttonpress()
@@ -148,6 +166,7 @@ class SweepLine:
         # # self.set_color(C, "blue")
 
         LUC = set(self.LC) | set(self.UC)
+        print("The number of segments related to this point is {}".format(len(LUC)))
         if len(LUC) > 1:
             p.intersection = LUC
             self.intersection.add(p)
@@ -165,7 +184,7 @@ class SweepLine:
         insert_idx = bisect.bisect_right(self.t.s, seg_p)
         for seg_i, seg in enumerate(self.UC):
             # e.sweep(p.y)
-            if seg not in self.t.s:
+            if not any(elem is seg for elem in self.t.s):
                 if seg_i == 0:
                 # self.check(self.t.s)
                     self.t.s.insert(insert_idx, seg)
@@ -177,7 +196,8 @@ class SweepLine:
         print("Active Segments:")
         for seg in self.t.s:
             print("({}, {}), ({}, {})".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
-        plt.waitforbuttonpress()
+        # plt.waitforbuttonpress()
+        self.pause
         if len(self.UC) == 0:
             s_l = self.t.left_neighbor(seg_p)
             s_r = self.t.right_neighbor(seg_p)
@@ -200,7 +220,8 @@ class SweepLine:
             if s_r:
                 self.find_new_event(s_pprime, s_r, p)
 
-        plt.waitforbuttonpress()
+        # plt.waitforbuttonpress()
+        self.pause()
         self.clean_sets()
         p.plot.set_color("gray")
 
@@ -209,6 +230,7 @@ class SweepLine:
         if c1 is not None:
             if c1.y < p.y or (c1.y == p.y and c1.x > p.x) and c1 not in self.q.heap:
                 # c1.draw(self.ax, color="blue")
+                print("find new intersection ({}, {})".format(c1.x, c1.y))
                 self.intersection.add(c1)
                 self.q.insertKey(c1, ax=self.ax)
 
@@ -224,7 +246,12 @@ if __name__ == "__main__":
     import numpy as np
     from data_struct.line_segment import create_linesegment_from_enpoint_list
     seg_list = np.random.randint(-5, 5, (6, 4))
-
+    # seg_list = np.array([[0, 2, -3, 4],
+    #                      [-3, -2, -3, -5],
+    #                      [-1, -3, -3, -2],
+    #                      [3, -1, 2, 4],
+    #                      [-5, -5, -2, 3],
+    #                      [-5, 3, 4, 3]])
     sl = SweepLine(seg_list)
 
     sl.find_intersection()
@@ -232,4 +259,5 @@ if __name__ == "__main__":
     sl.ax.set_title("all the intersection points")
     for points in sl.intersection:
         points.draw(sl.ax, color="pink")
-    plt.waitforbuttonpress()
+    # plt.waitforbuttonpress()
+    sl.pause()
