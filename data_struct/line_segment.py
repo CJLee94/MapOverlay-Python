@@ -110,6 +110,10 @@ class EndPoint(Point):
         if is_pointoverlay(self, other):
             self.incident_edge["upper"] += other.incident_edge["upper"]
             self.incident_edge["lower"] += other.incident_edge["lower"]
+            for e_h in other.incident_edge["upper"]:
+                e_h.high = self
+            for e_l in other.incident_edge["lower"]:
+                e_l.low = self
         else:
             raise RuntimeError("The overlaid points must have the same position")
 
@@ -175,7 +179,7 @@ class LineSegments(object):
         # axis.scatter([self.low.x, self.high.x], [self.low.y, self.high.y])
 
     def __eq__(self, other):
-        return self.x == other.x
+        return self.high == other.high and self.low == other.low
 
     def __gt__(self, other):
         return self.x > other.x
