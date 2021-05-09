@@ -1,5 +1,6 @@
 from heapq import heappush, heappop, heapify
 import itertools
+import matplotlib.colors as mcolors
 
 class EventQueue:
     def __init__(self):
@@ -25,9 +26,9 @@ class EPEventQueue(EventQueue):
     def insertKey(self, k, ax=None):
         if k not in self.heap:
             if k.plot is not None:
-                k.plot.set_color("red")
+                k.plot.set_color(mcolors.CSS4_COLORS["lightsteelblue"])
             elif ax is not None:
-                k.draw(ax, color="red")
+                k.draw(ax, color=mcolors.CSS4_COLORS["lightsteelblue"])
             heappush(self.heap, k)
         else:
             i = self.heap.index(k)
