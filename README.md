@@ -1,4 +1,4 @@
-# MapOverlay-Python
+# SweepLine-Python
 
 This repo is an implementation of sweep line algorithm visualization using python.
 
