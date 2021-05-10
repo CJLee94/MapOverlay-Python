@@ -119,13 +119,6 @@ class SweepLine:
             self.h.append(seg)
         else:
             bisect.insort_left(self.UC, seg)
-        # S.add(seg)
-        # if S is self.L:
-        #     seg.plot[0].set_color("green")
-        # elif S is self.U:
-        #     seg.plot[0].set_color("red")
-        # elif S is self.C:
-        #     seg.plot[0].set_color("yellow")
 
     def clean_sets(self):
         self.L = set()
@@ -160,27 +153,10 @@ class SweepLine:
         # self.ax.set_title("all the segments whose upper endpoint is p")
         self.print_("find line segments whose upper endpoint is current point")
         for seg in p.incident_edge["upper"]:
-            # if seg.horizontal:
-            #     seg.sweep(p.y)
-            #     seg.x = p.x
-            # else:
-            #     seg.sweep(p.y - 1e-3)
             seg.sweep()
             self.U.add(seg)
             self.print_("line segment:(({}, {}), ({}, {}))".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
-            # self.check(self.UC)
-            # if seg.x == 1e12:
-            #     self.UC.append(seg)
-            # else:
-            #     bisect.insort_left(self.UC, seg)
-            # self.add_to_set(e, self.U)
 
-        # self.set_color(U, "red")
-        # plt.waitforbuttonpress()
-        # self.set_color(U, "blue")
-
-        # t_s = self.t.s.copy()
-        # for seg in t_s:
         t_s = self.t.node_list.copy()
         for seg in t_s:
             # seg = self.t.s.pop()
@@ -193,28 +169,11 @@ class SweepLine:
                 self.print_("its lower endpoint is p")
             elif p.interior_line(seg):
                 self.t.remove(seg)
-                # if seg.horizontal:
-                #     seg.sweep(p.y)
-                #     seg.x = p.x
-                # else:
-                #     seg.sweep(p.y - 1e-3)
                 self.C.add(seg)
-                # self.check(self.UC)
-                # bisect.insort_left(self.UC, seg)
-                # self.LC.append(seg)
                 if self.draw:
                     self.inactivate(seg)
-                # self.t.insert(seg)
-                # self.add_to_set(seg, self.C)
                 self.print_("p is contained in the segment")
             else:
-                # self.t.delete(seg)
-                # seg.sweep()
-                # if seg.horizontal:
-                #     seg.sweep(p.y)
-                #     seg.x = p.x
-                # else:
-                #     seg.sweep(p.y)
                 self.print_("segment is not related to p")
                 # self.add_to_sortedlist(t_s, seg)
                 if self.draw:
@@ -225,16 +184,6 @@ class SweepLine:
         t_s = self.t.node_list.copy()
         for seg in t_s:
             seg.sweep()
-        # self.t.s = t_s
-        # self.ax.set_title("all the segments whose lower endpoint is p")
-        # # self.set_color(L, "red")
-        # plt.waitforbuttonpress()
-        # # self.set_color(L, "blue")
-        #
-        # self.ax.set_title("all the segments who contains p")
-        # # self.set_color(C, "red")
-        # plt.waitforbuttonpress()
-        # # self.set_color(C, "blue")
 
         LUC = self.L | self.U | self.C
         self.print_("The number of segments related to this point is {}".format(len(LUC)))
@@ -242,27 +191,10 @@ class SweepLine:
             p.intersection = LUC
             self.intersection.add(p)
 
-        # delete the segments in L|C from t
-        # LC = self.L | self.C
-        # UC = self.U | self.C
-        # for e in self.LC:
-        #     self.t.delete(e)
-        # e.plot[0].set_color("blue")
-
-        # seg_p = LineSegments([p.x, p.y - 1, p.x, p.y + 1])
-        # seg_p.x = p.x
-        # self.UC += self.h
-        # insert_idx = bisect.bisect_right(self.t.s, seg_p)
         UC = self.U | self.C
         for seg_i, seg in enumerate(UC):
             self.t.insert(seg)
-            # e.sweep(p.y)
-            # if not any(elem is seg for elem in self.t.s):
-            #     if seg_i == 0:
-            #         # self.check(self.t.s)
-            #         self.t.s.insert(insert_idx, seg)
-            #     else:
-            #         self.t.s.insert(insert_idx + 1, seg)
+
             if self.draw:
                 if seg.low.plot is None or seg.high.plot is None:
                     import pdb
@@ -276,7 +208,8 @@ class SweepLine:
         for seg in self.t.node_list:
             self.print_("({}, {}), ({}, {})".format(seg.high.x, seg.high.y, seg.low.x, seg.low.y))
         # plt.waitforbuttonpress()
-        self.t.draw(self.ax_2)
+        if self.draw:
+            self.t.draw(self.ax_2)
         # self.pause()
         if len(UC) == 0:
             s_l = self.t.leftNeighbor(p)
@@ -287,18 +220,12 @@ class SweepLine:
         else:
             s_prime = min(UC)
             s_l_node = self.t.leftNeighbor(s_prime)
-            # if self.t.s.index(s_prime) - 1 >= 0:
-            #     s_l = self.t.s[self.t.s.index(s_prime) - 1]
-            # else:
-            #     s_l = None
+
             if s_l_node:
                 self.find_new_event(s_l_node.val, s_prime, p)
             s_pprime = max(UC)
             s_r_node = self.t.rightNeighbor(s_pprime)
-            # if self.t.s.index(s_pprime) + 1 < len(self.t.s):
-            #     s_r = self.t.s[self.t.s.index(s_pprime) + 1]
-            # else:
-            #     s_r = None
+
             if s_r_node:
                 self.find_new_event(s_pprime, s_r_node.val, p)
 
@@ -342,15 +269,19 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    fig = plt.figure()
-    ax, ax2 = fig.subplots(1,2)
-    ax2.set_axis_off()
-    ax.set_xlim([-11, 11])
-    ax.set_ylim([-11, 11])
-    plt.subplots_adjust(bottom=0.2)
-
     class Index:
-        seg_list = []
+        def __init__(self, fig=None):
+            self.seg_list = []
+            if fig is None:
+                self.fig = plt.figure()
+            else:
+                self.fig = fig
+            self.ax, self.ax2 = fig.subplots(1, 2)
+            self.ax2.set_axis_off()
+            self.ax.set_xlim([-11, 11])
+            self.ax.set_ylim([-11, 11])
+            plt.subplots_adjust(bottom=0.2)
+            self.sl = None
 
         def draw(self, event):
 
@@ -358,61 +289,79 @@ if __name__ == "__main__":
                 xy = plt.ginput(2)
                 x = [p[0] for p in xy]
                 y = [p[1] for p in xy]
-                line = ax.plot(x, y)
-                ax.figure.canvas.draw()
+                line = self.ax.plot(x, y)
+                self.ax.figure.canvas.draw()
 
                 # self.lines.append(line)
                 self.seg_list.append([xy[0][0], xy[0][1], xy[1][0], xy[1][1]])
+            print(self.seg_list[:9])
 
         def random_generate(self, event):
             self.seg_list = np.random.randint(-10, 10, (10, 4))
             for coords in self.seg_list:
-                line = ax.plot(coords[[0, 2]], coords[[1, 3]])
-            ax.figure.canvas.draw()
+                line = self.ax.plot(coords[[0, 2]], coords[[1, 3]])
+            self.ax.figure.canvas.draw()
+
+        def preset1(self, event):
+            self.seg_list = np.array([[-10.329024609442223, 5.700463246219737, -7.293439394229113, -0.332663228738749],
+                                      [-2.3328489205881766, 4.065990735075605, -8.033826032085969, -2.6161174722489307],
+                                      [-1.5554429508384793, 7.575299361943884, 2.442644893588543, -1.750808495760861],
+                                      [3.0349542038740296, 3.561227165457563, -2.7030422395166056, -3.265099204614982],
+                                      [8.735931315371822, 4.931299711563675, 5.5892881044801825, -1.1739358447688133]])
+            for coords in self.seg_list:
+                line = self.ax.plot(coords[[0, 2]], coords[[1, 3]])
+            self.ax.figure.canvas.draw()
+
+        def preset2(self, event):
+            self.seg_list = np.array([[-9.329502648335467, 4.114063455991609, -7.182381398550584, -1.8709902980508701],
+                                      [8.84698931105035, 2.0469364566034436, 6.477752069908409, -0.5249541124027637],
+                                      [-6.960265407193528, 2.3834455030154693, -1.868640824382341936124537715, 1.712549028530946292255423991],
+                                      [-6.404975428800885, 5.171663316143693, -1.868640824382341936124537715, 1.712549028530946292255423991],
+                                      [-3.9987188557661035, 6.565772222707803, 0.07340765244660474, -2.712262914080938],
+                                      [-6.182859437443829, -0.8854995192727912, 3.5162055184809873, 4.955336072021677],
+                                      [-1.868640824382341936124537715, 1.712549028530946292255423991, -3.1472742222307186, -3.0247356000349637]])
+            for coords in self.seg_list:
+                line = self.ax.plot(coords[[0, 2]], coords[[1, 3]])
+            self.ax.figure.canvas.draw()
 
         def sweep(self, event):
-            sl = SweepLine(np.array(self.seg_list), fig=fig, axes=(ax, ax2), draw=True, verbose=True)
-            sl.find_intersection()
+            if len(self.seg_list)!=0:
+                self.sl = SweepLine(np.array(self.seg_list), fig=self.fig, axes=(self.ax, self.ax2), draw=True, verbose=True)
+                self.sl.find_intersection()
 
-    callback = Index()
-    axdraw = plt.axes([0.59, 0.05, 0.1, 0.075])
+        def clear(self, event):
+            self.seg_list = []
+            # self.ax, self.ax2 = fig.subplots(1, 2)
+            self.ax.clear()
+            self.ax2.clear()
+            self.ax2.set_axis_off()
+            self.ax.set_xlim([-11, 11])
+            self.ax.set_ylim([-11, 11])
+            plt.subplots_adjust(bottom=0.2)
+            self.sl = None
+
+    fig = plt.figure()
+    callback = Index(fig=fig)
+    axpre1 = plt.axes([0.26, 0.05, 0.1, 0.075])
+    bpre1 = Button(axpre1, "Preset1")
+    bpre1.on_clicked(callback.preset1)
+    axpre2 = plt.axes([0.37, 0.05, 0.1, 0.075])
+    bpre2 = Button(axpre2, "Preset2")
+    bpre2.on_clicked(callback.preset2)
+    axdraw = plt.axes([0.48, 0.05, 0.1, 0.075])
     bdraw = Button(axdraw, "Draw")
     bdraw.on_clicked(callback.draw)
-    axrandom = plt.axes([0.7, 0.05, 0.1, 0.075])
+    axrandom = plt.axes([0.59, 0.05, 0.1, 0.075])
     brandom = Button(axrandom, "Random")
     brandom.on_clicked(callback.random_generate)
-    axsweep = plt.axes([0.81, 0.05, 0.1, 0.075])
+    axsweep = plt.axes([0.70, 0.05, 0.1, 0.075])
     bsweep = Button(axsweep, "Sweep")
     bsweep.on_clicked(callback.sweep)
+    axclear = plt.axes([0.81, 0.05, 0.1, 0.075])
+    bclear = Button(axclear, "Clear")
+    bclear.on_clicked(callback.clear)
 
     plt.show()
-    # print(callback.seg_list)
-
-    # seg_list = np.array(callback.seg_list)
-    # # seg_list = np.random.randint(-10, 10, (10, 4))
-    # # seg_list = np.array([[ -4,  -5,   8,  -8],
-    # #                      [  7,  -5,  -8,   2],
-    # #                      [  5,  -8,  -9,   1],
-    # #                      [ -7,   5,   6,   9],
-    # #                      [ -2,   0,   1,   1],
-    # #                      [  3,   4,   3,  -8],
-    # #                      [  3,   4,  -3,  -1],
-    # #                      [ -7,  -6,  -3,   9],
-    # #                      [  2,   4,   5,  -6],
-    # #                      [ -8, -10,  -9,  -5]])
-    # sl = SweepLine(seg_list, draw=True, verbose=True)
-    # plt.show()
-    # sl.move_line(sl.y_max, sl.y_min)
-    tic = time.time()
-    sl.find_intersection()
-    toc = time.time()
-    #
-    # # sl.ax.set_title("all the intersection points")
-    # # for points in sl.intersection:
-    # #     points.draw(sl.ax, color="pink")
-    # sl.ax.set_title("The number of intersection points:{}".format(len(sl.intersection)))
-    # # plt.waitforbuttonpress()
-    sl.pause()
 
     number_size = np.arange(3, 50)
     trial_per_size = 10
@@ -449,8 +398,13 @@ if __name__ == "__main__":
     def log_function(x, a):
         return a * (x[0] + x[1]) * np.log(x[0])
 
-    # x =
-    # y =
+    def log_function_upper(x, a):
+        return a * (x + (x-1)*x/2) * np.log(x[0])
+    def log_function_lower(x, a):
+        return a * x * np.log(x[0])
+    x = np.stack([number_size]*trial_per_size, axis=0).flatten()
+    x = np.stack([x, experiment_results[1].flatten()], axis=0)
+    y = experiment_results[0].flatten()
 
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
@@ -462,8 +416,19 @@ if __name__ == "__main__":
     ax.scatter(number_size.flatten(), experiment_results[1].flatten(), experiment_results[0].flatten())
 
     fig2, ax2 = plt.subplots()
-    ax2.scatter(number_size.flatten(), experiment_results[0].flatten())
-
+    ax2.scatter(number_size.flatten(), experiment_results[0].flatten(),
+                color=mcolors.CSS4_COLORS["lightsteelblue"])
+    # ax2.plot(number_size[0], experiment_results[0].mean(axis=0), color="red")
+    ax2.plot(number_size[0], log_function_upper(number_size[0], np.array([param.item()]*len(number_size[0]))),
+             color="red", label="Upper bound")
+    ax2.plot(number_size[0], log_function_lower(number_size[0], np.array([param.item()] * len(number_size[0]))),
+             color="green", label="Lower bound")
+    ax2.plot(number_size[0], experiment_results[0].mean(axis=0),
+             color="orange", label="Mean for each input length")
+    ax2.legend()
+    ax2.set_title("Sweep Line Performance")
+    ax2.set_xlabel("Input length")
+    ax2.set_ylabel("Running time")
     fig3, ax3 = plt.subplots()
     ax3.scatter(experiment_results[1].flatten(), experiment_results[0].flatten())
 
