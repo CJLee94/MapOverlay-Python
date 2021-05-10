@@ -409,49 +409,6 @@ class SegTree(Tree):
         while current is not None and k.x > current.val.x:
             current = current.right
         return current
-    #     if self.root is None:
-    #         return None
-    #     if k.__class__ is Point or k.__class__ is EndPoint:
-    #         if k.x < self.root.val.x:
-    #             return self.leftLeftNeighbor(self.root.left, k)
-    #         elif k.x > self.root.val.x:
-    #             return self.rightLeftNeighbor(self.root.right, k)
-    #         else:
-    #             return self.root.val
-    #     elif k.__class__ is LineSegments:
-    #
-    #
-    # def leftLeftNeighbor(self, node, k):
-    #     if node is None:
-    #         return None
-    #     if k.x < node.val.x:
-    #         if node.left is not None:
-    #             self.leftLeftNeighbor(node.left, k)
-    #         else:
-    #             return None
-    #     elif k.x == node.val.x:
-    #         return node.val
-    #     else:
-    #         if node.right is not None:
-    #             self.rightLeftNeighbor(node.right, k)
-    #         else:
-    #             return node.val
-    #
-    # def rightLeftNeighbor(self, node, k):
-    #     if node is None:
-    #         return None
-    #     if k.x < node.val.x:
-    #         if node.left is not None:
-    #             self.leftLeftNeighbor(node.left, k)
-    #         else:
-    #             return node.parent.val
-    #     elif k.x == node.val.x:
-    #         return node.val
-    #     else:
-    #         if node.right is not None:
-    #             self.rightLeftNeighbor(node.right, k)
-    #         else:
-    #             return node.val
 
 
 
