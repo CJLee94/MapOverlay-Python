@@ -1,5 +1,9 @@
 import math
 import matplotlib.pyplot as plt
+import numpy as np
+from decimal import *
+
+quantizer = Decimal('10') ** -6
 
 def direction(a, b, c):
     val = (b.y - a.y) * (c.x - b.y) - (b.x - a.x)*(c.y - b.y)
@@ -46,10 +50,11 @@ def is_pointoverlay(p1, p2):
 
 
 class Point:
-    def __init__(self, coord):
-        self.x = coord[0]
-        self.y = coord[1]
+    def __init__(self, x, y, idex=None):
+        self.x = Decimal(x)
+        self.y = Decimal(y)
         self.plot = None
+        self.idex = idex
 
     def interior_line(self, seg):
         if abs((self.x - seg.low.x) * (seg.high.y - seg.low.y) - (self.y - seg.low.y) * (seg.high.x - seg.low.x))>1e-6:
@@ -67,18 +72,20 @@ class Point:
         if axis is None:
             figure, axis = plt.subplots()
         self.plot = axis.scatter(self.x, self.y, **kwargs)
+        axis.text(self.x,self.y, self.__str__())
+
+    def __str__(self):
+        return "{}".format(self.idex)
 
     def __eq__(self, other):
         return self.y == other.y and self.x == other.x
 
     def __gt__(self, other):
-        if self.y != other.y:
-            return self.y < other.y
-        else:
-            return self.x > other.x
-
-    def __ge__(self, other):
-        if self.__gt__(other) or self.__eq__(other):
+        if self.y > other.y:
+            return False
+        elif self.y < other.y:
+            return True
+        elif self.x > other.x:
             return True
         else:
             return False
@@ -92,16 +99,10 @@ class Point:
     def __hash__(self):
         return hash(self.x + 100*self.y)
 
-    def __le__(self, other):
-        if self.__lt__(other) or self.__eq__(other):
-            return True
-        else:
-            return False
-
 
 class EndPoint(Point):
     def __init__(self, coord, incident_edge, position):
-        super(EndPoint, self).__init__(coord=coord)
+        super(EndPoint, self).__init__(coord[0], coord[1])
         self.incident_edge = {"upper": [], "lower": []}
         if position:
             self.incident_edge[position].append(incident_edge)
@@ -125,35 +126,40 @@ def check_coord(coord):
 
 
 class LineSegments(object):
-    def __init__(self, coords):
+    def __init__(self, coords, idex=None, swline = None):
         """
         :param coords: in the form of xyxy, where the each pair of xy is the coordinates one of the two endpoints.
         """
-        endpoint_1 = Point(coords[:2])
-        endpoint_2 = Point(coords[-2:])
+        endpoint_1 = Point(coords[0].item(), coords[1].item())
+        endpoint_2 = Point(coords[2].item(), coords[3].item())
 
         # if is_pointoverlay(endpoint_1, endpoint_2):
         #     self.high = None
         #     self.low = None
-        if endpoint_1.y > endpoint_2.y:
-            self.high = endpoint_1
-            self.low = endpoint_2
-        elif endpoint_1.y == endpoint_2.y:
-            if endpoint_1.x < endpoint_2.x:
-                self.high = endpoint_1
-                self.low = endpoint_2
-            else:
-                self.high = endpoint_2
-                self.low = endpoint_1
-        else:
+        if endpoint_1 > endpoint_2:
             self.high = endpoint_2
             self.low = endpoint_1
+        else:
+            self.high = endpoint_1
+            self.low = endpoint_2
+        # elif endpoint_1.y == endpoint_2.y:
+        #     if endpoint_1.x < endpoint_2.x:
+        #         self.high = endpoint_1
+        #         self.low = endpoint_2
+        #     else:
+        #         self.high = endpoint_2
+        #         self.low = endpoint_1
+        # else:
+        #     self.high = endpoint_2
+        #     self.low = endpoint_1
         self.high = EndPoint([self.high.x, self.high.y], self, "upper")
         self.low = EndPoint([self.low.x, self.low.y], self, "lower")
+        self.high.idex = str(idex) + "h"
+        self.low.idex = str(idex) + "l"
         self.length = math.sqrt((self.high.x-self.low.x)**2 + (self.high.y-self.low.y)**2)
         self.x = None
         self.plot = None
-        self.sweep_status = None
+        # self.sweep_status = None
         if self.high.y == self.low.y:
             self.horizontal = True
         else:
@@ -164,12 +170,49 @@ class LineSegments(object):
         else:
             self.vertical = False
 
-    def sweep(self, y):
-        self.sweep_status = y
-        if self.low.y == self.high.y:
-            self.x = self.high.x
-        elif (self.low.y <= y <= self.high.y) or (self.low.y >= y >= self.high.y):
-            self.x = self.high.x + (y-self.high.y) * (self.high.x - self.low.x) / (self.high.y - self.low.y)
+        self.swline = swline
+
+        self.params = dict()
+        self.get_params()
+
+    def get_params(self):
+        self.params["a"] = self.get_a()
+        self.params["b"] = self.get_b()
+        self.params["hp"] = self.get_hp()
+
+    def get_a(self):
+        if self.horizontal:
+            return Decimal(0)
+        elif self.vertical:
+            return np.inf
+        else:
+            return (self.high.y - self.low.y)/(self.high.x - self.low.x)
+
+    def get_b(self):
+        if self.params["a"] != np.inf:
+            return self.high.y - self.params["a"] * self.high.x
+        else:
+            return None
+
+    def get_hp(self):
+        if self.params["a"] == 0:
+            return np.inf
+        else:
+            return -1/self.params["a"]
+
+    def sweep(self):
+        p = self.swline.current_status
+        x, y = p.x, p.y
+        if self.low.y == self.high.y and self.low.y == y:
+            self.x = p.x
+        # elif (self.low.y <= y <= self.high.y) or (self.low.y >= y >= self.high.y):
+        #     self.x = self.high.x + (y-self.high.y) * (self.high.x - self.low.x) / (self.high.y - self.low.y)
+        else:
+            if self.params["a"] != np.inf:
+                self.x = (y - self.params["b"])/self.params["a"]
+            else:
+                self.x = self.high.x
+
 
     def draw(self, axis=None, **kwargs):
         if axis is None:
@@ -178,61 +221,75 @@ class LineSegments(object):
         self.plot = axis.plot([self.low.x, self.high.x], [self.low.y, self.high.y], **kwargs)
         # axis.scatter([self.low.x, self.high.x], [self.low.y, self.high.y])
 
+    def __str__(self):
+        return "{}{}".format(str(self.high), str(self.low))
+
     def __eq__(self, other):
         return self.high == other.high and self.low == other.low
 
-    def __gt__(self, other):
-        return self.x > other.x
-
-    def __ge__(self, other):
-        if self.__gt__(other) or self.__eq__(other):
-            return True
-        else:
+    def __lt__(self, other):
+        self.sweep()
+        other.sweep()
+        if self == other:
             return False
+        if abs(self.x - other.x) < 1e-12:
+            return self.params["hp"] < other.params["hp"]
+        else:
+            return self.x < other.x
+
+    def __gt__(self, other):
+        return not self.__lt__(other) and not self == other
 
     def __hash__(self):
-        return hash(self.low.x + 100*self.low.y + 1e4*self.high.x + 1e6*self.high.y)
-
-    def __lt__(self, other):
-        return self.x < other.x
-
-    def __le__(self, other):
-        if self.__lt__(other) or self.__eq__(other):
-            return True
-        else:
-            return False
+        return hash(int(self.low.x + Decimal(100)*self.low.y + Decimal(1e4)*self.high.x + Decimal(1e6)*self.high.y))
 
 
-def create_linesegment_from_enpoint_list(point_list):
+def create_linesegment_from_enpoint_list(point_list, swline=None):
     segments = []
-    for seg in point_list:
+    for i, seg in enumerate(point_list):
         if not check_coord(seg):
-            segments.append(LineSegments(seg))
+            segments.append(LineSegments(seg, idex=i, swline=swline))
     return segments
 
 
 if __name__ == "__main__":
     import numpy as np
+    from bst import Tree
     from event_queue import EventQueue
     # seg_list = [[0, 2, 1, -1], [2, 0, -1, 1]]
-    seg_list = np.random.randint(-5, 5, (6, 4))
 
-    seg_list = create_linesegment_from_enpoint_list(seg_list)
+    class TestClass:
+        def __init__(self):
+            self.current_status = 0
+
+    seg_list = np.random.randint(-8, 8, (6, 2))
+    seg_list = [seg_list[:, 0], -5*np.ones((6,)), seg_list[:, 1], 5*np.ones((6,))]
+    seg_list = np.stack(seg_list, axis=1)
+
+    seg_list = create_linesegment_from_enpoint_list(seg_list, swline=TestClass())
+
 
     ep_list = []
+    seg_tree = Tree()
     for seg in seg_list:
+        seg.sweep()
+        seg_tree.insert(seg)
         ep_list += [seg.high, ]
         ep_list += [seg.low, ]
     # heapify(seg_list)
 
+    fig0, ax0 = plt.subplots()
+    seg_tree.draw(ax0)
     fig, ax = plt.subplots()
-    # for seg in seg_list:
-    #     seg.draw(ax)
-    #     # seg.high.draw(ax)
-    #
-    # plt.show()
+    for seg in seg_list:
+        seg.draw(ax)
+        seg.high.draw(ax)
+        seg.low.draw(ax)
+        # seg.high.draw(ax)
 
-    seg_list[0].high.draw(ax)
-    seg_list[0].high.incident_edge.draw(ax)
+    plt.show()
+
+    # seg_list[0].high.draw(ax)
+    # seg_list[0].high.incident_edge.draw(ax)
 
     plt.show()
