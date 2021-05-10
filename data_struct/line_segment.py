@@ -208,10 +208,14 @@ class LineSegments(object):
         # elif (self.low.y <= y <= self.high.y) or (self.low.y >= y >= self.high.y):
         #     self.x = self.high.x + (y-self.high.y) * (self.high.x - self.low.x) / (self.high.y - self.low.y)
         else:
-            if self.params["a"] != np.inf:
-                self.x = (y - self.params["b"])/self.params["a"]
-            else:
+            if self.params["a"] == 0:
+                self.x = x
+            elif self.params["a"] == np.inf:
                 self.x = self.high.x
+            else:
+                self.x = (y - self.params["b"])/self.params["a"]
+            # else:
+            #     self.x = self.high.x
 
 
     def draw(self, axis=None, **kwargs):
