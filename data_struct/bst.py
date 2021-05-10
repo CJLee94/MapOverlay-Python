@@ -1,7 +1,7 @@
 import bisect
-
+import numpy as np
 import matplotlib.pyplot as plt
-
+from data_struct.line_segment import Point, EndPoint, LineSegments
 
 class SortedSet:
     def __init__(self):
@@ -42,6 +42,7 @@ class Tree:
     def __init__(self):
         self.root = None
         self.node_count = 0
+        self.node_list = []
 
     def insert(self, k):
         if k is None:
@@ -49,6 +50,7 @@ class Tree:
         if not self.contains(k):
             self.root = self._insert(self.root, k)
             self.node_count += 1
+            self.node_list = self.traverse()
             return True
         return False
 
@@ -155,19 +157,23 @@ class Tree:
         if node is None:
             return False
         if node.val == k:
-            return True
+            return node
         elif k < node.val:
             return self._contains(node.left, k)
         else:
             return self._contains(node.right, k)
 
     def minValueNode(self, node):
+        if node is None:
+            return None
         current = node
         while current.left is not None:
             current = current.left
         return current
 
     def maxValueNode(self, node):
+        if node is None:
+            return None
         current = node
         while current.right is not None:
             current = current.right
@@ -179,6 +185,7 @@ class Tree:
         if self.contains(k):
             self.root = self._remove(self.root, k)
             self.node_count -= 1
+            self.node_list.remove(k)
             return True
         return False
 
@@ -231,10 +238,13 @@ class Tree:
     def draw(self, ax=None):
         if ax is None:
             fig, ax = plt.subplots()
-        ax.set_xlim(-2**(self.root.height-1)-0.5, 2**(self.root.height-1)+0.5)
-        ax.set_ylim(-2*(self.root.height)-0.5, 0.5)
-        ax.set_aspect(1)
-        self._draw(self.root, 0, 0, ax)
+        ax.clear()
+        if self.root is not None:
+            ax.set_xlim(-2**(self.root.height-1)-0.5, 2**(self.root.height-1)+0.5)
+            ax.set_ylim(-2*(self.root.height)-0.5, 0.5)
+            ax.set_aspect(1)
+            self._draw(self.root, 0, 0, ax)
+        ax.set_axis_off()
 
     def _draw(self, node, par_x, par_y, ax):
         self.update_level()
@@ -255,7 +265,7 @@ class Tree:
                             [y + 2 * ratio, par_y - 2 * ratio], color="black")
 
             ax.add_artist(plt.Circle((x, y), radius=.25))
-            ax.text(x, y, str(node.val), ha="center", va="center", color="w", fontsize=10)
+            ax.text(x, y, str(node.val), ha="center", va="center", color="w", fontsize=9)
             self._draw(node.left, x, y, ax)
             self._draw(node.right, x, y, ax)
 
@@ -276,8 +286,179 @@ class Tree:
             self.print_tree(node.left)
 
 
+class SegTree(Tree):
+    def __init__(self):
+        super(SegTree, self).__init__()
+
+    def _cmp(self, item1, item2):
+        if item1 is LineSegments and item2 is LineSegments:
+            if item1 > item2:
+                return 1
+            elif item1 < item2:
+                return -1
+            else:
+                return 0
+        elif item1.__class__ is Point or item1.__class__ is EndPoint:
+            if item1.x > item2.val.x:
+                return 1
+            elif item1.x < item2.val.x:
+                return -1
+            else:
+                return 0
+        elif item2.__class__ is Point or item2.__class__ is EndPoint:
+            if item1.val.x > item2.x:
+                return 1
+            elif item1.val.x < item2.x:
+                return -1
+            else:
+                return 0
+
+    def leftNeighbor(self, k):
+        if k.__class__ is Point or k.__class__ is EndPoint:
+            return self._leftNeighbor(self.root, k)
+        elif k.__class__ is LineSegments:
+            node = self.contains(k)
+            if node:
+                if node.left is not None:
+                    return node.left
+                else:
+                    return self._firstleftparent(node)
+
+    def _firstleftparent(self, node):
+        if node is None:
+            return None
+        current = node
+        while current.parent is not None and current.parent.left is current:
+            current = current.parent
+        return current.parent
+
+    def _leftNeighbor(self, node, k):
+
+        node = self._findrightnode(node, k)
+
+        if node is None:
+            return None
+        if node.val.x == k.x:
+            return node
+        return self._max(node, self._leftNeighbor(node.right, k))
+
+    def _max(self, node1, node2):
+        if node1 is None and node2 is None:
+            return None
+        elif node1 is None:
+            return node2
+        elif node2 is None:
+            return node1
+        else:
+            if node1.val > node2.val:
+                return node1
+            elif node2.val > node1.val:
+                return node2
+            # return max(node1.val, node2.val)
+
+    def _findrightnode(self, node, k):
+        current = node
+        while current is not None and k.x < current.val.x:
+            current = current.left
+        return current
+
+    def rightNeighbor(self, k):
+        if k.__class__ is Point or k.__class__ is EndPoint:
+            return self._rightNeighbor(self.root, k)
+        elif k.__class__ is LineSegments:
+            node = self.contains(k)
+            if node:
+                if node.right is not None:
+                    return node.right
+                else:
+                    return self._firstrightparent(node)
+
+    def _firstrightparent(self, node):
+        if node is None:
+            return None
+        current = node
+        while current.parent is not None and current.parent.right is current:
+            current = current.parent
+        return current.parent
+
+    def _rightNeighbor(self, node, k):
+
+        node = self._findleftnode(node, k)
+
+        if node is None:
+            return None
+        if node.val.x == k.x:
+            return node
+        return self._min(node, self._rightNeighbor(node.left, k))
+
+    def _min(self, node1, node2):
+        if node1 is None and node2 is None:
+            return None
+        elif node1 is None:
+            return node2
+        elif node2 is None:
+            return node1
+        else:
+            if node1.val < node2.val:
+                return node1
+            elif node2.val < node1.val:
+                return node2
+
+    def _findleftnode(self, node, k):
+        current = node
+        while current is not None and k.x > current.val.x:
+            current = current.right
+        return current
+    #     if self.root is None:
+    #         return None
+    #     if k.__class__ is Point or k.__class__ is EndPoint:
+    #         if k.x < self.root.val.x:
+    #             return self.leftLeftNeighbor(self.root.left, k)
+    #         elif k.x > self.root.val.x:
+    #             return self.rightLeftNeighbor(self.root.right, k)
+    #         else:
+    #             return self.root.val
+    #     elif k.__class__ is LineSegments:
+    #
+    #
+    # def leftLeftNeighbor(self, node, k):
+    #     if node is None:
+    #         return None
+    #     if k.x < node.val.x:
+    #         if node.left is not None:
+    #             self.leftLeftNeighbor(node.left, k)
+    #         else:
+    #             return None
+    #     elif k.x == node.val.x:
+    #         return node.val
+    #     else:
+    #         if node.right is not None:
+    #             self.rightLeftNeighbor(node.right, k)
+    #         else:
+    #             return node.val
+    #
+    # def rightLeftNeighbor(self, node, k):
+    #     if node is None:
+    #         return None
+    #     if k.x < node.val.x:
+    #         if node.left is not None:
+    #             self.leftLeftNeighbor(node.left, k)
+    #         else:
+    #             return node.parent.val
+    #     elif k.x == node.val.x:
+    #         return node.val
+    #     else:
+    #         if node.right is not None:
+    #             self.rightLeftNeighbor(node.right, k)
+    #         else:
+    #             return node.val
+
+
+
+
 if __name__ == "__main__":
     import numpy as np
+
 
     number_sample = np.random.randint(0, 100, 16)
     # number_sample = np.array([74, 78,50, 97, 57, 25, 39, 21])
